@@ -1,98 +1,264 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# AI Energy Management Platform — Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+API REST para la gestión de medidores eléctricos, detección de anomalías asistida por IA, priorización y recomendación de acciones.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+Construido con **NestJS + TypeScript + Firebase (Firestore + Auth)**.
 
-## Description
+---
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## 📋 Tabla de contenidos
 
-## Project setup
+- [Descripción](#-descripción)
+- [Stack tecnológico](#-stack-tecnológico)
+- [Arquitectura](#-arquitectura)
+- [Requisitos previos](#-requisitos-previos)
+- [Instalación](#-instalación)
+- [Variables de entorno](#-variables-de-entorno)
+- [Scripts disponibles](#-scripts-disponibles)
+- [Seed de datos](#-seed-de-datos)
+- [API Endpoints](#-api-endpoints)
+- [Motor de anomalías](#-motor-de-anomalías)
+- [Testing](#-testing)
+- [Estructura del proyecto](#-estructura-del-proyecto)
+- [Despliegue](#-despliegue)
+- [Decisiones técnicas](#-decisiones-técnicas)
+
+---
+
+## 🎯 Descripción
+
+Este backend expone la API que consume el frontend de la plataforma. Sus responsabilidades:
+
+1. **Gestión de medidores** — CRUD y consultas de los 12 medidores eléctricos.
+2. **Lecturas** — series temporales de consumo, voltaje, corriente y factor de potencia.
+3. **Motor de anomalías** — detección híbrida (Z-score, IQR, reglas de calidad, correlación con eventos).
+4. **Capa de IA** — explicación, priorización y recomendación de acciones sobre anomalías detectadas.
+5. **Dashboard** — agregaciones para KPIs del panel principal.
+
+El flujo end-to-end es: **DATOS → ANÁLISIS → ANOMALÍA → EXPLICACIÓN → PRIORIZACIÓN → ACCIÓN**.
+
+---
+
+## 🛠 Stack tecnológico
+
+| Capa | Tecnología |
+|---|---|
+| Framework | NestJS 10+ |
+| Lenguaje | TypeScript 5+ |
+| Base de datos | Firebase Firestore |
+| Autenticación | Firebase Auth (verificación con `firebase-admin`) |
+| Validación | class-validator + class-transformer |
+| Documentación | Swagger (`@nestjs/swagger`) |
+| Testing | Jest + Supertest |
+| Runtime | Node.js 20 LTS |
+
+---
+
+## 🏗 Arquitectura
+┌─────────────┐ ┌──────────────────┐ ┌──────────────┐
+│ React SPA │─────▶│ NestJS API │─────▶│ Firestore │
+│ (Frontend) │ │ (Backend) │ │ + Auth │
+└─────────────┘ └──────────────────┘ └──────────────┘
+│
+▼
+┌──────────────┐
+│ Anomaly │
+│ Engine │
+│ + AI Layer │
+└──────────────┘
+
+
+### Módulos principales
+
+- `MetersModule` — gestión de medidores
+- `ReadingsModule` — lecturas por medidor
+- `EventsModule` — eventos operativos conocidos
+- `AnomaliesModule` — consulta de anomalías detectadas
+- `AiModule` — motor de detección + capa de explicación
+- `DashboardModule` — agregaciones y KPIs
+- `FirebaseModule` — configuración global de `firebase-admin`
+- `AuthModule` — guard de autenticación con Firebase
+
+---
+
+## ✅ Requisitos previos
+
+- Node.js 20 LTS
+- npm 10+ (o pnpm/yarn)
+- Cuenta de Firebase con un proyecto creado
+- Firestore habilitado en modo producción
+- Firebase Authentication habilitado (proveedor Email/Password)
+- Cuenta de servicio (`serviceAccountKey.json`) descargada desde Firebase Console
+
+---
+
+## 📦 Instalación
 
 ```bash
-$ pnpm install
+# 1. Clonar repositorio
+git clone <URL_DEL_REPO>
+cd ai-energy-management/backend
+
+# 2. Instalar dependencias
+npm install
+
+# 3. Copiar plantilla de variables de entorno
+cp .env.example .env
+
+# 4. Editar .env con tus credenciales (ver siguiente sección)
+
+# 5. Levantar en modo desarrollo
+npm run start:dev
 ```
 
-## Compile and run the project
+---
+
+## 🔑 Variables de entorno
+
+Copia `.env.example` a `.env` y completa los valores (ver `.env.example` para la lista completa, sin valores reales).
+
+| Variable | Descripción | Usada por |
+|---|---|---|
+| `PORT` | Puerto en el que arranca el servidor HTTP. | `src/main.ts` |
+| `NODE_ENV` | Entorno de ejecución (`development`, `production`, etc.). | Convención estándar de Node; no leída por código propio todavía. |
+| `FIREBASE_PROJECT_ID` | ID del proyecto de Firebase. | `FirebaseService` (inicialización de `firebase-admin`). |
+| `FIREBASE_CLIENT_EMAIL` | Email de la cuenta de servicio de Firebase. | `FirebaseService`. |
+| `FIREBASE_PRIVATE_KEY` | Private key de la cuenta de servicio. | `FirebaseService`. |
+| `CORS_ORIGIN` | Origen permitido para CORS. | Reservada — CORS aún no se configura en el código (spec futuro). |
+| `OPENAI_API_KEY` | API key de OpenAI. | Reservada para la capa de IA (spec futuro); no usada todavía. |
+
+**Formato de `FIREBASE_PRIVATE_KEY`:** el JSON del service account trae la clave con saltos de línea reales. Al copiarla a `.env` debe ir en una sola línea, entre comillas dobles, con los saltos de línea como `\n` literales:
+
+```
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIEv...\n-----END PRIVATE KEY-----\n"
+```
+
+---
+
+## 📜 Scripts disponibles
+
+| Script | Comando | Descripción |
+|---|---|---|
+| `start` | `npm run start` | Arranca el servidor (sin watch). |
+| `start:dev` | `npm run start:dev` | Arranca el servidor en modo watch. |
+| `start:debug` | `npm run start:debug` | Arranca en modo watch con el debugger de Node. |
+| `start:prod` | `npm run start:prod` | Arranca el build compilado (`dist/main.js`). |
+| `build` | `npm run build` | Compila el proyecto (`nest build`). |
+| `lint` | `npm run lint` | ESLint con `--fix` sobre `src`, `apps`, `libs`, `test`. |
+| `format` | `npm run format` | Prettier sobre `src/**/*.ts` y `test/**/*.ts`. |
+| `test` | `npm test` | Tests unitarios (Jest). |
+| `test:watch` | `npm run test:watch` | Tests unitarios en modo watch. |
+| `test:cov` | `npm run test:cov` | Tests unitarios con reporte de cobertura. |
+| `test:e2e` | `npm run test:e2e` | Tests end-to-end (`test/*.e2e-spec.ts`). |
+| `seed` | `npm run seed` | Siembra `meters`, `readings` y `events` en Firestore desde CSV. Ver [Seed de datos](#-seed-de-datos). |
+
+---
+
+## 🌱 Seed de datos
+
+`scripts/seed.ts` lee dos CSV (`readings.csv` y `events.csv`), deriva los medidores a partir de los `meter_id` distintos en `readings.csv`, y escribe `meters`, `readings` y `events` en Firestore de forma idempotente: usa `.set()` con ids deterministas, así que correr el seed varias veces no duplica documentos.
+
+### Ubicación de los CSVs
+
+Por defecto el seed busca:
+
+- `data/readings.csv`
+- `data/events.csv`
+
+### Formato esperado
+
+`readings.csv` (columnas requeridas):
+
+```
+meter_id,timestamp,consumption_kwh,voltage,current,power_factor,status
+```
+
+`events.csv` (columnas requeridas):
+
+```
+meter_id,event_timestamp,event_type,description
+```
+
+`status` y `event_type` se normalizan a mayúsculas automáticamente sin importar el casing del CSV de origen. `duration_hours` no viene en `events.csv`; el seed siempre lo escribe como `null` (el motor de detección infiere una ventana por defecto de `±24h` cuando es `null`).
+
+### Ejecutar el seed
 
 ```bash
-# development
-$ pnpm run start
-
-# watch mode
-$ pnpm run start:dev
-
-# production mode
-$ pnpm run start:prod
+npm run seed
 ```
 
-## Run tests
+### Overridear la ruta de los CSVs
+
+Por argumento:
 
 ```bash
-# unit tests
-$ pnpm run test
-
-# e2e tests
-$ pnpm run test:e2e
-
-# test coverage
-$ pnpm run test:cov
+npm run seed -- --readings=ruta/a/mis-readings.csv --events=ruta/a/mis-events.csv
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+O por variable de entorno:
 
 ```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
+SEED_READINGS_PATH=ruta/a/mis-readings.csv SEED_EVENTS_PATH=ruta/a/mis-events.csv npm run seed
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### Validaciones
 
-## Resources
+El seed falla con un error claro si:
 
-Check out a few resources that may come in handy when working with NestJS:
+- el archivo CSV no existe;
+- le faltan columnas esperadas;
+- `readings.csv` contiene filas duplicadas para el mismo `(meter_id, timestamp)`.
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+---
 
-## Support
+## 📦 Estructura del proyecto
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+```
+├── src/
+│   ├── main.ts
+│   ├── app.module.ts
+│   ├── firebase/
+│   │   ├── firebase.module.ts
+│   │   └── firebase.service.ts
+│   ├── auth/
+│   │   ├── auth.module.ts
+│   │   ├── auth.guard.ts
+│   │   └── auth.decorator.ts
+│   ├── meters/
+│   │   ├── meters.module.ts
+│   │   ├── meters.controller.ts
+│   │   ├── meters.service.ts
+│   │   └── dto/
+│   ├── readings/
+│   ├── events/
+│   ├── anomalies/
+│   ├── ai/
+│   │   ├── ai.module.ts
+│   │   ├── ai.controller.ts
+│   │   ├── ai.service.ts
+│   │   ├── engine/
+│   │   │   ├── baseline.calculator.ts
+│   │   │   ├── spike.detector.ts
+│   │   │   ├── outlier.detector.ts
+│   │   │   ├── quality.detector.ts
+│   │   │   ├── correlation.analyzer.ts
+│   │   │   └── classifier.ts
+│   │   └── explainer/
+│   │       ├── template.explainer.ts
+│   │       └── llm.explainer.ts
+│   ├── dashboard/
+│   └── common/
+│       ├── filters/
+│       ├── interceptors/
+│       └── pipes/
+├── scripts/
+│   └── seed.ts
+├── test/
+│   └── anomaly-engine.e2e-spec.ts
+├── data/                  
+├── .env.example
+├── .gitignore
+├── package.json
+├── tsconfig.json
+└── README.md
+```

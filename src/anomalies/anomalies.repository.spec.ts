@@ -96,4 +96,84 @@ describe('AnomaliesRepository', () => {
 
     expect(result).toEqual([]);
   });
+
+  function makeAnomalyInput(overrides: Partial<Record<string, unknown>> = {}) {
+    return {
+      meterId: 'M-001',
+      analysisId: 'analysis-123',
+      detectedAt: '2026-01-01T00:00:00.000Z',
+      type: 'REAL_ANOMALY' as const,
+      severity: 'HIGH' as const,
+      confidence: 0.9,
+      priorityScore: 2.7,
+      status: 'OPEN' as const,
+      reason: 'porque sí',
+      recommendedAction: 'investigar',
+      evidence: {
+        baselineKwh: 100,
+        observedKwh: 250,
+        variationPct: 150,
+        signals: ['Z_SCORE'],
+        windowStart: '2026-01-01T00:00:00.000Z',
+        windowEnd: '2026-01-02T00:00:00.000Z',
+        relatedEvents: [],
+        detectorScores: { Z_SCORE: 5 },
+      },
+      ...overrides,
+    };
+  }
+
+  describe('createMany', () => {
+    it('escribe cada anomalía con un id autogenerado usando un batch y retorna los ids', async () => {
+      const docRefs = [{ id: 'anomaly-a' }, { id: 'anomaly-b' }];
+      let callCount = 0;
+      const docFn = jest.fn().mockImplementation(() => docRefs[callCount++]);
+      const collection = jest.fn().mockReturnValue({ doc: docFn });
+      const batchSet = jest.fn();
+      const batchCommit = jest.fn().mockResolvedValue(undefined);
+      const batch = jest
+        .fn()
+        .mockReturnValue({ set: batchSet, commit: batchCommit });
+      const firebaseService = {
+        getFirestore: jest.fn().mockReturnValue({ collection, batch }),
+      } as unknown as FirebaseService;
+
+      const repository = new AnomaliesRepository(firebaseService);
+      const ids = await repository.createMany([
+        makeAnomalyInput(),
+        makeAnomalyInput({ meterId: 'M-002' }),
+      ]);
+
+      expect(collection).toHaveBeenCalledWith('anomalies');
+      expect(docFn).toHaveBeenCalledTimes(2);
+      expect(batchSet).toHaveBeenCalledTimes(2);
+      expect(batchSet).toHaveBeenNthCalledWith(
+        1,
+        docRefs[0],
+        expect.objectContaining({ meter_id: 'M-001' }),
+      );
+      expect(batchSet).toHaveBeenNthCalledWith(
+        2,
+        docRefs[1],
+        expect.objectContaining({ meter_id: 'M-002' }),
+      );
+      expect(batchCommit).toHaveBeenCalledTimes(1);
+      expect(ids).toEqual(['anomaly-a', 'anomaly-b']);
+    });
+
+    it('no toca Firestore cuando el array de anomalías está vacío', async () => {
+      const batch = jest.fn();
+      const collection = jest.fn();
+      const firebaseService = {
+        getFirestore: jest.fn().mockReturnValue({ collection, batch }),
+      } as unknown as FirebaseService;
+
+      const repository = new AnomaliesRepository(firebaseService);
+      const ids = await repository.createMany([]);
+
+      expect(ids).toEqual([]);
+      expect(batch).not.toHaveBeenCalled();
+      expect(collection).not.toHaveBeenCalled();
+    });
+  });
 });

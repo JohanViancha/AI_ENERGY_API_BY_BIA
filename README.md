@@ -151,6 +151,7 @@ FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIEv...\n-----END PRIVATE KE
 | `test:cov` | `npm run test:cov` | Tests unitarios con reporte de cobertura. |
 | `test:e2e` | `npm run test:e2e` | Tests end-to-end (`test/*.e2e-spec.ts`). |
 | `seed` | `npm run seed` | Siembra `meters`, `readings` y `events` en Firestore desde CSV. Ver [Seed de datos](#-seed-de-datos). |
+| `analyze` | `npm run analyze` | Dispara manualmente el motor híbrido de detección de anomalías. Ver [Motor de anomalías](#-motor-de-anomalías). |
 
 ---
 
@@ -208,6 +209,40 @@ El seed falla con un error claro si:
 - el archivo CSV no existe;
 - le faltan columnas esperadas;
 - `readings.csv` contiene filas duplicadas para el mismo `(meter_id, timestamp)`.
+
+---
+
+## 🧠 Motor de anomalías
+
+`scripts/analyze.ts` dispara manualmente el motor híbrido de detección de anomalías (`AnomalyEngineService.runAnalysis`) sobre las lecturas y eventos ya sembrados en Firestore. Orquesta 7 fases (`READINGS → BASELINE → DETECTION → CORRELATION → EVENTS → EXPLANATION → RECOMMENDATION`), corre 5 detectores independientes (`Z_SCORE`, `IQR_OUTLIER`, `DATA_QUALITY`, `ELECTRICAL_RELATION`, `HOURLY_PATTERN`), agrupa lecturas anómalas contiguas en tramos, clasifica tipo/severidad, calcula `confidence`/`priorityScore`, genera `reason`/`recommendedAction` por plantillas determinísticas (sin IA generativa todavía) y persiste los documentos `Anomaly` resultantes, dejando el `Analysis` en `status = 'COMPLETED'` (o `'FAILED'` si alguna fase lanza error).
+
+No expone ningún endpoint HTTP: el script es el único disparador de esta corrida (el contrato de API llega en un spec futuro).
+
+### Ejecutar el análisis
+
+```bash
+npm run analyze
+```
+
+Sin flags, analiza todos los medidores (`MetersRepository.listAll()`) sobre el rango completo de lecturas disponibles, con `gapHours = 4`.
+
+### Flags disponibles
+
+| Flag | Formato | Default | Descripción |
+|---|---|---|---|
+| `--meters` | `--meters=M-101,M-102` | todos los medidores | Lista de `meterId` a analizar, separados por coma. |
+| `--from` | `--from=2026-09-01` | `min(timestamp)` de las lecturas del medidor | Fecha ISO de inicio de la ventana de análisis. |
+| `--to` | `--to=2026-09-14` | `max(timestamp)` de las lecturas del medidor | Fecha ISO de fin de la ventana de análisis. |
+| `--windowDays` | `--windowDays=7` | — | Alternativa a `--from`/`--to`: últimos N días desde el máximo timestamp disponible. |
+| `--gapHours` | `--gapHours=4` | `4` | Separación máxima (en horas) entre lecturas anómalas consecutivas para seguir en el mismo tramo. |
+
+Ejemplo con varios flags:
+
+```bash
+npm run analyze -- --meters=M-109,M-112 --windowDays=14 --gapHours=6
+```
+
+Al finalizar imprime un resumen (`analysisId`, `status`, `anomaliesCount`, `highPriorityCount`, duración en ms) y termina con código `0` si `status = 'COMPLETED'` o `1` si `status = 'FAILED'`.
 
 ---
 

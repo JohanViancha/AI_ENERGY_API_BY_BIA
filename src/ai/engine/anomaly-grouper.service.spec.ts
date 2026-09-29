@@ -68,7 +68,7 @@ describe('AnomalyGrouperService', () => {
     expect(candidates[0].windowEnd).toBe(addHours(base, 57));
   });
 
-  it('M-112: lecturas cada 3h en 2 días se agrupan en un único candidato con gapHours=4 (default)', () => {
+  it('M-112: lecturas cada 3h en 2 días se agrupan en un único candidato con gapHours=7 (default)', () => {
     const base = '2026-01-01T00:00:00.000Z';
     const hours = Array.from({ length: 17 }, (_, i) => i * 3); // 0,3,...,48 → 2 días
     const inputs: AnomalousReadingInput[] = hours.map((h) =>

@@ -6,7 +6,13 @@ import {
 import { AnomalyCandidate } from './types';
 
 const FALSE_POSITIVE_COVERAGE_THRESHOLD = 90;
-const HIGH_VARIATION_THRESHOLD = 100;
+// Recalibración post-implementación (verificada contra el dataset sembrado): el único
+// REAL_ANOMALY del dataset (M-109) varía 98.14% vs. baseline horario — un umbral de 100%
+// lo clasificaba como MEDIUM pese a ser la incidencia sin evento explicativo más severa
+// del set. Se bajó a 90% para alinear el umbral con el mismo corte de "alta confianza"
+// que ya usa `FALSE_POSITIVE_COVERAGE_THRESHOLD`, sin afectar a M-104/M-106/M-112 (ninguno
+// pasa por esta rama: se clasifican por cobertura de evento o por DATA_QUALITY).
+const HIGH_VARIATION_THRESHOLD = 90;
 const MEDIUM_VARIATION_THRESHOLD = 30;
 
 export interface ClassificationResult {

@@ -18,22 +18,22 @@ function makeReading(overrides: Partial<Reading> = {}): Reading {
 }
 
 describe('detectElectricalRelation', () => {
-  it('no dispara justo en el umbral (error relativo = 0.15)', () => {
-    // V×I×PF = 1150, consumo×1000 = 1000 → error = 150/1000 = 0.15
-    const reading = makeReading({ voltage: 1150 });
-    expect(computeRelativeError(reading)).toBeCloseTo(0.15);
+  it('no dispara justo en el umbral (error relativo = 0.3)', () => {
+    // V×I×PF = 1300, consumo×1000 = 1000 → error = 300/1000 = 0.3
+    const reading = makeReading({ voltage: 1300 });
+    expect(computeRelativeError(reading)).toBeCloseTo(0.3);
     expect(detectElectricalRelation(reading)).toBeNull();
   });
 
-  it('dispara por encima del umbral (error relativo = 0.151)', () => {
-    const reading = makeReading({ voltage: 1151 });
+  it('dispara por encima del umbral (error relativo = 0.301)', () => {
+    const reading = makeReading({ voltage: 1301 });
     const signal = detectElectricalRelation(reading);
     expect(signal?.detector).toBe('ELECTRICAL_RELATION');
-    expect(signal?.value).toBeCloseTo(0.151);
+    expect(signal?.value).toBeCloseTo(0.301);
   });
 
-  it('no dispara por debajo del umbral (error relativo = 0.1)', () => {
-    const reading = makeReading({ voltage: 1100 });
+  it('no dispara por debajo del umbral (error relativo = 0.25)', () => {
+    const reading = makeReading({ voltage: 1250 });
     expect(detectElectricalRelation(reading)).toBeNull();
   });
 

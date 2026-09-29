@@ -53,13 +53,13 @@ describe('AnomalyClassifierService', () => {
     expect(result).toEqual({ type: 'EXPLAINABLE_ANOMALY', severity: 'MEDIUM' });
   });
 
-  it('rama 3a: sin evento (cobertura 0), variación > 100% → REAL_ANOMALY / HIGH', () => {
+  it('rama 3a: sin evento (cobertura 0), variación > 90% → REAL_ANOMALY / HIGH', () => {
     const result = service.classify(makeCandidate({ variationPct: 150 }), 0);
     expect(result).toEqual({ type: 'REAL_ANOMALY', severity: 'HIGH' });
   });
 
-  it('rama 3b: sin evento, variación exactamente 100% → REAL_ANOMALY / MEDIUM (no es > 100)', () => {
-    const result = service.classify(makeCandidate({ variationPct: 100 }), 0);
+  it('rama 3b: sin evento, variación exactamente 90% → REAL_ANOMALY / MEDIUM (no es > 90)', () => {
+    const result = service.classify(makeCandidate({ variationPct: 90 }), 0);
     expect(result).toEqual({ type: 'REAL_ANOMALY', severity: 'MEDIUM' });
   });
 

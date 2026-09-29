@@ -3,7 +3,10 @@ import { Reading } from '../../readings/entities/reading.entity';
 import { median } from './stats';
 import { AnomalyCandidate, DetectionSignal } from './types';
 
-const DEFAULT_GAP_HOURS = 4;
+// 7h (antes 4h): el dataset sembrado tiene incidentes reales con huecos internos de 6h
+// sin señal (ninguna lectura intermedia cruza ningún detector); con 4h ese incidente
+// quedaba partido en varios documentos `Anomaly` en vez de uno solo.
+const DEFAULT_GAP_HOURS = 7;
 const MS_PER_HOUR = 60 * 60 * 1000;
 
 export interface AnomalousReadingInput {

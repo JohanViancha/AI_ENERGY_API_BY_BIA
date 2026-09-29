@@ -51,8 +51,8 @@ export class RunAnalysisDto {
 
   @ApiPropertyOptional({
     description:
-      'Separación máxima en horas entre lecturas anómalas para seguir en el mismo tramo. Default 4',
-    example: 4,
+      'Separación máxima en horas entre lecturas anómalas para seguir en el mismo tramo. Default 7',
+    example: 7,
   })
   @IsOptional()
   @IsNumber()

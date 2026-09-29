@@ -23,13 +23,13 @@ const baseline: HourlyBaseline = {
 };
 
 describe('detectZScore', () => {
-  it('no dispara justo en el umbral (z = 3)', () => {
-    expect(detectZScore(makeReading(3), baseline)).toBeNull();
+  it('no dispara justo en el umbral (z = 5.5)', () => {
+    expect(detectZScore(makeReading(5.5), baseline)).toBeNull();
   });
 
-  it('dispara por encima del umbral (z = 3.5)', () => {
-    const signal = detectZScore(makeReading(3.5), baseline);
-    expect(signal).toEqual({ detector: 'Z_SCORE', value: 3.5 });
+  it('dispara por encima del umbral (z = 6)', () => {
+    const signal = detectZScore(makeReading(6), baseline);
+    expect(signal).toEqual({ detector: 'Z_SCORE', value: 6 });
   });
 
   it('no dispara por debajo del umbral (z = 2)', () => {

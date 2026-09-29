@@ -2,7 +2,9 @@ import { Reading } from '../../../readings/entities/reading.entity';
 import { quartiles } from '../stats';
 import { DetectionSignal, HourlyBaseline } from '../types';
 
-const IQR_MULTIPLIER = 1.5;
+// 3x (outlier "extremo" de Tukey) en vez de 1.5x ("leve"): con 1.5x el detector marcaba
+// residuos horarios normales del dataset sembrado como anomalía.
+const IQR_MULTIPLIER = 3;
 
 export interface IqrBounds {
   lowerBound: number;

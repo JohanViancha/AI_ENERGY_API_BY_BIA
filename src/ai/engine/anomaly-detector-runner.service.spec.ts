@@ -34,7 +34,7 @@ function flatBaseline(median: number, mad: number): HourlyBaseline[] {
 
 describe('AnomalyDetectorRunnerService', () => {
   it('corre los detectores por lectura y delega la agrupación, omitiendo medidores sin baseline', () => {
-    const spikeReading = makeReading('2026-01-01T05:00:00.000Z', 55); // z = 0.6745*(55-50)/1 = 3.3725 > 3
+    const spikeReading = makeReading('2026-01-01T05:00:00.000Z', 59); // z = 0.6745*(59-50)/1 = 6.0705 > 5.5
     const normalReading = makeReading('2026-01-02T05:00:00.000Z', 52); // z = 0.6745*2/1 = 1.349, no dispara
     const otherMeterReading = makeReading(
       '2026-01-01T05:00:00.000Z',
@@ -78,7 +78,7 @@ describe('AnomalyDetectorRunnerService', () => {
 
     expect(spikeInput.baselineMedian).toBe(50);
     expect(spikeInput.signals).toEqual([
-      { detector: 'Z_SCORE', value: 3.3725 },
+      { detector: 'Z_SCORE', value: 6.0705 },
     ]);
     expect(normalInput.signals).toEqual([]);
   });

@@ -26,8 +26,8 @@ describe('computeIqrBounds', () => {
     const residuals = [1, 2, 3, 4, 5, 6, 7];
     // q1 = mediana(1,2,3) = 2; q3 = mediana(5,6,7) = 6; IQR = 4
     const bounds = computeIqrBounds(residuals);
-    expect(bounds.lowerBound).toBe(2 - 1.5 * 4);
-    expect(bounds.upperBound).toBe(6 + 1.5 * 4);
+    expect(bounds.lowerBound).toBe(2 - 3 * 4);
+    expect(bounds.upperBound).toBe(6 + 3 * 4);
   });
 });
 

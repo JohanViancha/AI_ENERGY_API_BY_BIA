@@ -1,6 +1,6 @@
 # SPEC 03 — Contrato de API HTTP
 
-> **Status:** Approved
+> **Status:** Implemented
 > **Depends on:** SPEC 01, SPEC 02
 > **Date:** 2026-09-28
 > **Objective:** Exponer 8 endpoints HTTP de solo lectura (más el disparo del motor) sobre los repositorios de SPEC 01 y el motor de SPEC 02, protegidos con Firebase Auth, validados con DTOs, documentados en Swagger y con manejo de errores HTTP consistente.

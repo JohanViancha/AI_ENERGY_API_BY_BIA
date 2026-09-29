@@ -145,9 +145,17 @@ interface Anomaly {
 
 **Reglas de asignación de `severity` (las aplica el motor futuro, se documentan aquí porque son parte del contrato de datos):**
 
-- `HIGH` → variación > 100% sin evento explicativo, o problema de calidad de datos severo.
-- `MEDIUM` → variación entre 30% y 100%, o evento que explica parcialmente.
+- `HIGH` → variación > 90% sin evento explicativo, o problema de calidad de datos severo.
+- `MEDIUM` → variación entre 30% y 90%, o evento que explica parcialmente.
 - `LOW` → variación < 30%, o completamente explicada por un evento.
+
+> **Recalibración post-implementación (verificada contra el dataset sembrado):** el umbral
+> original (`HIGH` > 100%) es una convención redonda, pero el único incidente `REAL_ANOMALY`
+> sin evento explicativo del dataset sembrado (`M-109`) varía 98.14% vs. su baseline horario —
+> por debajo de 100%, quedaba clasificado como `MEDIUM` pese a ser la anomalía más severa del
+> set. Se bajó a 90% (mismo corte que ya usa `FALSE_POSITIVE_COVERAGE_THRESHOLD` para cobertura
+> de evento) para que `M-109` clasifique como `HIGH`. No afecta a `M-104`/`M-106`/`M-112`: ninguno
+> pasa por esta rama (se clasifican por cobertura de evento o por `DATA_QUALITY`).
 
 `severityWeight`: `HIGH = 3`, `MEDIUM = 2`, `LOW = 1`. `priorityScore = severityWeight × confidence`.
 

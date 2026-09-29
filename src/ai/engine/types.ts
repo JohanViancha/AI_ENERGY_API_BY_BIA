@@ -5,7 +5,7 @@ export interface RunAnalysisParams {
   from?: string; // ISO date; default: min(timestamp) de las lecturas del medidor
   to?: string; // ISO date; default: max(timestamp) de las lecturas del medidor
   windowDays?: number; // alternativa a from/to: últimos N días desde el máximo timestamp disponible
-  gapHours?: number; // default 4; separación máxima entre lecturas anómalas para seguir en el mismo tramo
+  gapHours?: number; // default 7; separación máxima entre lecturas anómalas para seguir en el mismo tramo
 }
 
 export interface HourlyBaseline {

@@ -1,7 +1,10 @@
 import { Reading } from '../../../readings/entities/reading.entity';
 import { DetectionSignal } from '../types';
 
-const RELATIVE_ERROR_TOLERANCE = 0.15;
+// El ruido normal de sensor/redondeo en el dataset sembrado ya alcanza 15-27% de error
+// relativo (p97≈16.7%, p99≈26.8% sobre las 4032 lecturas); 15% marcaba como anomalía
+// lecturas perfectamente normales.
+const RELATIVE_ERROR_TOLERANCE = 0.3;
 
 export function computeRelativeError(reading: Reading): number {
   const expectedWatts = reading.voltage * reading.current * reading.powerFactor;

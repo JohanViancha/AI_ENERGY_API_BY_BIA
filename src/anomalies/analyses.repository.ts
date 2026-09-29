@@ -96,4 +96,38 @@ export class AnalysesRepository {
       .doc(analysisId)
       .update(update);
   }
+
+  async findLatestCompleted(): Promise<Analysis | null> {
+    const snapshot = await this.firebaseService
+      .getFirestore()
+      .collection(COLLECTION)
+      .where('status', '==', 'COMPLETED')
+      .orderBy('started_at', 'desc')
+      .limit(1)
+      .get();
+
+    if (snapshot.docs.length === 0) {
+      return null;
+    }
+
+    const doc = snapshot.docs[0];
+    return fromFirestoreDoc(doc.id, doc.data() as AnalysisFirestoreDoc);
+  }
+
+  async findLatestByMeter(meterId: string): Promise<Analysis | null> {
+    const snapshot = await this.firebaseService
+      .getFirestore()
+      .collection(COLLECTION)
+      .where('meters_analyzed', 'array-contains', meterId)
+      .orderBy('started_at', 'desc')
+      .limit(1)
+      .get();
+
+    if (snapshot.docs.length === 0) {
+      return null;
+    }
+
+    const doc = snapshot.docs[0];
+    return fromFirestoreDoc(doc.id, doc.data() as AnalysisFirestoreDoc);
+  }
 }

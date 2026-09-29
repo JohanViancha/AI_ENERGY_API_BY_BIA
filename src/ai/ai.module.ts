@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
 import { AnomaliesModule } from '../anomalies/anomalies.module';
+import { AuthModule } from '../auth/auth.module';
 import { EventsModule } from '../events/events.module';
 import { MetersModule } from '../meters/meters.module';
 import { ReadingsModule } from '../readings/readings.module';
+import { AiController } from './ai.controller';
 import { RecommendationTemplateService } from './explainer/recommendation-template.service';
 import { ReasonTemplateService } from './explainer/reason-template.service';
 import { AnomalyBuilderService } from './engine/anomaly-builder.service';
@@ -16,7 +18,14 @@ import { EventCorrelatorService } from './engine/event-correlator.service';
 import { ReadingEventLoaderService } from './engine/reading-event-loader.service';
 
 @Module({
-  imports: [MetersModule, ReadingsModule, EventsModule, AnomaliesModule],
+  imports: [
+    MetersModule,
+    ReadingsModule,
+    EventsModule,
+    AnomaliesModule,
+    AuthModule,
+  ],
+  controllers: [AiController],
   providers: [
     BaselineCalculatorService,
     AnomalyGrouperService,

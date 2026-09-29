@@ -169,6 +169,7 @@ function buildMocks(callOrder: string[]) {
     finish,
     createMany,
     run,
+    loadReadings,
     finalAnalysis,
   };
 }
@@ -311,6 +312,60 @@ describe('AnomalyEngineService (orquestación)', () => {
       );
 
       expect(finish).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('startAnalysis (ejecución en background)', () => {
+    it('resuelve con el analysisId antes de que las fases en background terminen', async () => {
+      const callOrder: string[] = [];
+      const { engine, create, finish, loadReadings } = buildMocks(callOrder);
+
+      let releaseReadings: (value: Map<string, never[]>) => void = () => {};
+      loadReadings.mockImplementation(() => {
+        callOrder.push('readingEventLoader.loadReadings');
+        return new Promise((resolve) => {
+          releaseReadings = resolve;
+        });
+      });
+
+      const analysisId = await engine.startAnalysis({ meterIds: ['M-001'] });
+
+      expect(analysisId).toBe('analysis-1');
+      expect(create).toHaveBeenCalledWith({ metersAnalyzed: ['M-001'] });
+      expect(finish).not.toHaveBeenCalled();
+
+      releaseReadings(new Map([['M-001', []]]));
+      await new Promise((resolve) => setImmediate(resolve));
+
+      expect(finish).toHaveBeenCalledWith(
+        'analysis-1',
+        'COMPLETED',
+        null,
+        null,
+        1,
+        1,
+      );
+    });
+
+    it('si la ejecución en background falla, deja el Analysis en FAILED con errorCode/errorMessage', async () => {
+      const callOrder: string[] = [];
+      const { engine, finish, run } = buildMocks(callOrder);
+      const failure = new Error('boom en background');
+      run.mockImplementation(() => {
+        throw failure;
+      });
+
+      const analysisId = await engine.startAnalysis({ meterIds: ['M-001'] });
+      expect(analysisId).toBe('analysis-1');
+
+      await new Promise((resolve) => setImmediate(resolve));
+
+      expect(finish).toHaveBeenCalledWith(
+        'analysis-1',
+        'FAILED',
+        'Error',
+        'boom en background',
+      );
     });
   });
 });

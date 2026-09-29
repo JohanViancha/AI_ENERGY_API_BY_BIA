@@ -65,6 +65,27 @@ describe('AnomaliesRepository', () => {
     expect(result[0].priorityScore).toBe(2.7);
   });
 
+  it('findByAnalysisId también filtra por meter_id en Firestore cuando se lo pasa', async () => {
+    const docs = [anomalyDoc('anomaly-1', {})];
+    const query = createQueryMock(docs);
+    const collection = jest.fn().mockReturnValue(query);
+    const firebaseService = {
+      getFirestore: jest.fn().mockReturnValue({ collection }),
+    } as unknown as FirebaseService;
+
+    const repository = new AnomaliesRepository(firebaseService);
+    const result = await repository.findByAnalysisId('analysis-123', 'M-001');
+
+    expect(query.where).toHaveBeenCalledWith(
+      'analysis_id',
+      '==',
+      'analysis-123',
+    );
+    expect(query.where).toHaveBeenCalledWith('meter_id', '==', 'M-001');
+    expect(query.orderBy).toHaveBeenCalledWith('priority_score', 'desc');
+    expect(result).toHaveLength(1);
+  });
+
   it('findByMeter queries by meter_id, ordered by detected_at desc', async () => {
     const docs = [anomalyDoc('anomaly-2', {})];
     const query = createQueryMock(docs);
@@ -95,6 +116,40 @@ describe('AnomaliesRepository', () => {
     const result = await repository.findByAnalysisId('analysis-empty');
 
     expect(result).toEqual([]);
+  });
+
+  describe('findById', () => {
+    it('retorna la anomalía cuando el documento existe', async () => {
+      const doc = anomalyDoc('anomaly-1', {});
+      const getFn = jest.fn().mockResolvedValue({ exists: true, ...doc });
+      const docFn = jest.fn().mockReturnValue({ get: getFn });
+      const collection = jest.fn().mockReturnValue({ doc: docFn });
+      const firebaseService = {
+        getFirestore: jest.fn().mockReturnValue({ collection }),
+      } as unknown as FirebaseService;
+
+      const repository = new AnomaliesRepository(firebaseService);
+      const result = await repository.findById('anomaly-1');
+
+      expect(collection).toHaveBeenCalledWith('anomalies');
+      expect(docFn).toHaveBeenCalledWith('anomaly-1');
+      expect(result?.id).toBe('anomaly-1');
+      expect(result?.meterId).toBe('M-001');
+    });
+
+    it('retorna null cuando el documento no existe', async () => {
+      const getFn = jest.fn().mockResolvedValue({ exists: false });
+      const docFn = jest.fn().mockReturnValue({ get: getFn });
+      const collection = jest.fn().mockReturnValue({ doc: docFn });
+      const firebaseService = {
+        getFirestore: jest.fn().mockReturnValue({ collection }),
+      } as unknown as FirebaseService;
+
+      const repository = new AnomaliesRepository(firebaseService);
+      const result = await repository.findById('anomaly-inexistente');
+
+      expect(result).toBeNull();
+    });
   });
 
   function makeAnomalyInput(overrides: Partial<Record<string, unknown>> = {}) {

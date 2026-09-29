@@ -2,6 +2,41 @@ import type { FirebaseService } from '../firebase/firebase.service';
 import { AnalysesRepository } from './analyses.repository';
 import type { AnalysisFirestoreDoc } from './entities/analysis.entity';
 
+function createQueryMock(docs: unknown[]) {
+  const query = {
+    where: jest.fn(),
+    orderBy: jest.fn(),
+    limit: jest.fn(),
+    get: jest.fn().mockResolvedValue({ docs }),
+  };
+  query.where.mockReturnValue(query);
+  query.orderBy.mockReturnValue(query);
+  query.limit.mockReturnValue(query);
+  return query;
+}
+
+function analysisDoc(
+  id: string,
+  overrides: Partial<Record<string, unknown>> = {},
+) {
+  return {
+    id,
+    data: () => ({
+      started_at: '2026-01-01T00:00:00.000Z',
+      finished_at: '2026-01-01T01:00:00.000Z',
+      status: 'COMPLETED',
+      error_code: null,
+      error_message: null,
+      triggered_by: 'MANUAL',
+      meters_analyzed: ['M-001'],
+      progress: { phase: 'RECOMMENDATION', pct: 100 },
+      anomalies_count: 3,
+      high_priority_count: 1,
+      ...overrides,
+    }),
+  };
+}
+
 describe('AnalysesRepository', () => {
   it('findById returns the Analysis mapped from the Firestore doc when it exists', async () => {
     const docSnapshot = {
@@ -161,5 +196,76 @@ describe('AnalysesRepository', () => {
         high_priority_count: 2,
       }),
     );
+  });
+
+  describe('findLatestCompleted', () => {
+    it('filtra por status COMPLETED, ordena por started_at desc y limita a 1', async () => {
+      const query = createQueryMock([analysisDoc('analysis-1')]);
+      const collection = jest.fn().mockReturnValue(query);
+      const firebaseService = {
+        getFirestore: jest.fn().mockReturnValue({ collection }),
+      } as unknown as FirebaseService;
+
+      const repository = new AnalysesRepository(firebaseService);
+      const result = await repository.findLatestCompleted();
+
+      expect(collection).toHaveBeenCalledWith('analyses');
+      expect(query.where).toHaveBeenCalledWith('status', '==', 'COMPLETED');
+      expect(query.orderBy).toHaveBeenCalledWith('started_at', 'desc');
+      expect(query.limit).toHaveBeenCalledWith(1);
+      expect(result?.id).toBe('analysis-1');
+      expect(result?.status).toBe('COMPLETED');
+    });
+
+    it('retorna null cuando nunca corrió una COMPLETED', async () => {
+      const query = createQueryMock([]);
+      const collection = jest.fn().mockReturnValue(query);
+      const firebaseService = {
+        getFirestore: jest.fn().mockReturnValue({ collection }),
+      } as unknown as FirebaseService;
+
+      const repository = new AnalysesRepository(firebaseService);
+      const result = await repository.findLatestCompleted();
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('findLatestByMeter', () => {
+    it('filtra por meters_analyzed array-contains, ordena por started_at desc y limita a 1', async () => {
+      const query = createQueryMock([
+        analysisDoc('analysis-2', { meters_analyzed: ['M-001', 'M-002'] }),
+      ]);
+      const collection = jest.fn().mockReturnValue(query);
+      const firebaseService = {
+        getFirestore: jest.fn().mockReturnValue({ collection }),
+      } as unknown as FirebaseService;
+
+      const repository = new AnalysesRepository(firebaseService);
+      const result = await repository.findLatestByMeter('M-001');
+
+      expect(collection).toHaveBeenCalledWith('analyses');
+      expect(query.where).toHaveBeenCalledWith(
+        'meters_analyzed',
+        'array-contains',
+        'M-001',
+      );
+      expect(query.orderBy).toHaveBeenCalledWith('started_at', 'desc');
+      expect(query.limit).toHaveBeenCalledWith(1);
+      expect(result?.id).toBe('analysis-2');
+    });
+
+    it('retorna null cuando el medidor nunca fue analizado', async () => {
+      const query = createQueryMock([]);
+      const collection = jest.fn().mockReturnValue(query);
+      const firebaseService = {
+        getFirestore: jest.fn().mockReturnValue({ collection }),
+      } as unknown as FirebaseService;
+
+      const repository = new AnalysesRepository(firebaseService);
+      const result = await repository.findLatestByMeter('M-sin-analisis');
+
+      expect(result).toBeNull();
+    });
   });
 });

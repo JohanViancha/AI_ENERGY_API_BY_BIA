@@ -1,6 +1,6 @@
 # SPEC 01 — Modelo de datos y fuentes de ingesta
 
-> **Status:** Implement
+> **Status:** Implemented
 > **Depends on:** ninguno
 > **Date:** 2026-09-25
 > **Objective:** Definir las entidades Meter, Reading, OperationalEvent, Analysis y Anomaly, su estructura en Firestore, el script de siembra idempotente desde CSV, y las queries de lectura mínimas que necesitarán el motor de detección de anomalías y la API REST.

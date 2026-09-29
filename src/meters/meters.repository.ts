@@ -22,4 +22,18 @@ export class MetersRepository {
       fromFirestoreDoc(doc.data() as MeterFirestoreDoc),
     );
   }
+
+  async findById(meterId: string): Promise<Meter | null> {
+    const doc = await this.firebaseService
+      .getFirestore()
+      .collection(COLLECTION)
+      .doc(meterId)
+      .get();
+
+    if (!doc.exists) {
+      return null;
+    }
+
+    return fromFirestoreDoc(doc.data() as MeterFirestoreDoc);
+  }
 }

@@ -31,6 +31,14 @@
         { "fieldPath": "meter_id", "order": "ASCENDING" },
         { "fieldPath": "detected_at", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "analyses",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "meters_analyzed", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "started_at", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

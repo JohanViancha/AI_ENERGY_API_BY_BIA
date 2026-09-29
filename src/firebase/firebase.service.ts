@@ -28,6 +28,10 @@ export class FirebaseService {
     return this.app.firestore();
   }
 
+  getAuth(): admin.auth.Auth {
+    return this.app.auth();
+  }
+
   // Normaliza formas comunes en que FIREBASE_PRIVATE_KEY llega mal formada desde .env:
   // comillas envolventes sin quitar, \n escapados sin convertir, o CRLF de Windows.
   private static normalizePrivateKey(

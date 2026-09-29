@@ -124,7 +124,7 @@ Copia `.env.example` a `.env` y completa los valores (ver `.env.example` para la
 | `FIREBASE_PROJECT_ID` | ID del proyecto de Firebase. | `FirebaseService` (inicialización de `firebase-admin`). |
 | `FIREBASE_CLIENT_EMAIL` | Email de la cuenta de servicio de Firebase. | `FirebaseService`. |
 | `FIREBASE_PRIVATE_KEY` | Private key de la cuenta de servicio. | `FirebaseService`. |
-| `CORS_ORIGIN` | Origen permitido para CORS. | Reservada — CORS aún no se configura en el código (spec futuro). |
+| `CORS_ORIGIN` | Origen permitido para CORS. | `src/main.ts` (`app.enableCors`). |
 | `OPENAI_API_KEY` | API key de OpenAI. | Reservada para la capa de IA (spec futuro); no usada todavía. |
 
 **Formato de `FIREBASE_PRIVATE_KEY`:** el JSON del service account trae la clave con saltos de línea reales. Al copiarla a `.env` debe ir en una sola línea, entre comillas dobles, con los saltos de línea como `\n` literales:
@@ -212,11 +212,38 @@ El seed falla con un error claro si:
 
 ---
 
+## 🔌 API Endpoints
+
+Todos los endpoints requieren el header `Authorization: Bearer <idToken>` con un ID token válido de Firebase Auth (`FirebaseAuthGuard`, vía `firebase-admin` `verifyIdToken`). Sin ese header, o con un token inválido/expirado, cualquier endpoint responde `401` antes de llegar al controller.
+
+La documentación interactiva (Swagger UI) está disponible en `/docs` una vez el servidor está corriendo — por ejemplo `http://localhost:3000/docs` en desarrollo.
+
+| Método | Ruta | Descripción | Respuestas |
+|---|---|---|---|
+| `GET` | `/meters` | Lista de medidores (`MeterSummary[]`): última lectura y conteo de anomalías abiertas por medidor. | `200`, `401` |
+| `GET` | `/meters/:meterId` | Proyección completa de un medidor (`MeterDetail`): agrega total de lecturas, último `analysisId` y desglose de anomalías por tipo. | `200`, `401`, `404` |
+| `GET` | `/meters/:meterId/readings` | Lecturas paginadas por cursor. Query: `from`/`to` (ISO 8601, obligatorios), `limit` (opcional, default `100`, máx `500`), `cursor` (opcional). | `200`, `400`, `401`, `404` |
+| `GET` | `/anomalies` | Lista de anomalías de una corrida. Query: `analysisId` (obligatorio), `meterId`/`severity`/`type` (opcionales). | `200`, `400`, `401` |
+| `GET` | `/anomalies/:id` | Detalle de una anomalía con su evidencia completa. | `200`, `401`, `404` |
+| `POST` | `/ai/analyze` | Dispara el motor de detección de anomalías en background y responde de inmediato con `{ analysisId, status: 'RUNNING' }`, sin esperar a que la corrida termine. | `202`, `400`, `401` |
+| `GET` | `/ai/analysis/:id` | Estado/resultado de una corrida (`progress.phase`/`pct`, `status`). Se consulta por polling mientras la corrida avanza. | `200`, `401`, `404` |
+| `GET` | `/dashboard/summary` | KPIs agregados de la última corrida `COMPLETED` (`bySeverity`, `byType`, `avgConfidence`). Responde `200` con `analysisId: null` y contadores en `0` si nunca corrió ninguna. | `200`, `401` |
+
+Todos los errores (`400`/`401`/`404`/`500`) devuelven la misma forma (`HttpErrorResponse`): `statusCode`, `message`, `error`, `timestamp`, `path`. Los `500` nunca exponen stack trace ni mensaje interno crudo.
+
+### Ejemplo con curl
+
+```bash
+curl -H "Authorization: Bearer <ID_TOKEN>" http://localhost:3000/meters
+```
+
+---
+
 ## 🧠 Motor de anomalías
 
 `scripts/analyze.ts` dispara manualmente el motor híbrido de detección de anomalías (`AnomalyEngineService.runAnalysis`) sobre las lecturas y eventos ya sembrados en Firestore. Orquesta 7 fases (`READINGS → BASELINE → DETECTION → CORRELATION → EVENTS → EXPLANATION → RECOMMENDATION`), corre 5 detectores independientes (`Z_SCORE`, `IQR_OUTLIER`, `DATA_QUALITY`, `ELECTRICAL_RELATION`, `HOURLY_PATTERN`), agrupa lecturas anómalas contiguas en tramos, clasifica tipo/severidad, calcula `confidence`/`priorityScore`, genera `reason`/`recommendedAction` por plantillas determinísticas (sin IA generativa todavía) y persiste los documentos `Anomaly` resultantes, dejando el `Analysis` en `status = 'COMPLETED'` (o `'FAILED'` si alguna fase lanza error).
 
-No expone ningún endpoint HTTP: el script es el único disparador de esta corrida (el contrato de API llega en un spec futuro).
+El script sigue siendo el disparador síncrono usado para pruebas/operación manual (`AnomalyEngineService.runAnalysis`, que espera a que la corrida termine). El endpoint `POST /ai/analyze` (ver [API Endpoints](#-api-endpoints)) usa en cambio `AnomalyEngineService.startAnalysis`, que dispara la misma corrida en background y responde de inmediato.
 
 ### Ejecutar el análisis
 

@@ -64,6 +64,29 @@ export class AnomalyEngineService {
     return (await this.analysesRepository.findById(analysisId)) as Analysis;
   }
 
+  async startAnalysis(params: RunAnalysisParams): Promise<string> {
+    const meterIds =
+      params.meterIds ??
+      (await this.metersRepository.listAll()).map((meter) => meter.meterId);
+    const analysisId = await this.analysesRepository.create({
+      metersAnalyzed: meterIds,
+    });
+
+    void this.runPhases(analysisId, meterIds, params).catch(async (error) => {
+      const errorCode = error instanceof Error ? error.name : 'UNKNOWN_ERROR';
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      await this.analysesRepository.finish(
+        analysisId,
+        'FAILED',
+        errorCode,
+        errorMessage,
+      );
+    });
+
+    return analysisId;
+  }
+
   private async runPhases(
     analysisId: string,
     meterIds: string[],

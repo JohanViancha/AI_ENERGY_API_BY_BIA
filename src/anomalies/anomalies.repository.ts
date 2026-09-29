@@ -34,13 +34,20 @@ export class AnomaliesRepository {
     return ids;
   }
 
-  async findByAnalysisId(analysisId: string): Promise<Anomaly[]> {
-    const snapshot = await this.firebaseService
+  async findByAnalysisId(
+    analysisId: string,
+    meterId?: string,
+  ): Promise<Anomaly[]> {
+    let query = this.firebaseService
       .getFirestore()
       .collection(COLLECTION)
-      .where('analysis_id', '==', analysisId)
-      .orderBy('priority_score', 'desc')
-      .get();
+      .where('analysis_id', '==', analysisId);
+
+    if (meterId) {
+      query = query.where('meter_id', '==', meterId);
+    }
+
+    const snapshot = await query.orderBy('priority_score', 'desc').get();
 
     return snapshot.docs.map((doc) =>
       fromFirestoreDoc(doc.id, doc.data() as AnomalyFirestoreDoc),
@@ -58,5 +65,19 @@ export class AnomaliesRepository {
     return snapshot.docs.map((doc) =>
       fromFirestoreDoc(doc.id, doc.data() as AnomalyFirestoreDoc),
     );
+  }
+
+  async findById(id: string): Promise<Anomaly | null> {
+    const doc = await this.firebaseService
+      .getFirestore()
+      .collection(COLLECTION)
+      .doc(id)
+      .get();
+
+    if (!doc.exists) {
+      return null;
+    }
+
+    return fromFirestoreDoc(doc.id, doc.data() as AnomalyFirestoreDoc);
   }
 }

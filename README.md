@@ -120,11 +120,12 @@ Copia `.env.example` a `.env` y completa los valores (ver `.env.example` para la
 | Variable | Descripción | Usada por |
 |---|---|---|
 | `PORT` | Puerto en el que arranca el servidor HTTP. | `src/main.ts` |
-| `NODE_ENV` | Entorno de ejecución (`development`, `production`, etc.). | Convención estándar de Node; no leída por código propio todavía. |
+| `NODE_ENV` | Entorno de ejecución (`development`, `production`, etc.). | Con `production` se restringe CORS y se oculta Swagger. |
 | `FIREBASE_PROJECT_ID` | ID del proyecto de Firebase. | `FirebaseService` (inicialización de `firebase-admin`). |
 | `FIREBASE_CLIENT_EMAIL` | Email de la cuenta de servicio de Firebase. | `FirebaseService`. |
 | `FIREBASE_PRIVATE_KEY` | Private key de la cuenta de servicio. | `FirebaseService`. |
-| `CORS_ORIGIN` | Origen permitido para CORS. | `src/main.ts` (`app.enableCors`). |
+| `CORS_ORIGIN` | Orígenes permitidos para CORS, separados por coma. Obligatoria en producción. | `src/main.ts`, `validateEnv`. |
+| `SWAGGER_ENABLED` | `true` para exponer `/docs` en producción (por defecto solo fuera de producción). | `src/main.ts`. |
 | `OPENAI_API_KEY` | API key de OpenAI. | Reservada para la capa de IA (spec futuro); no usada todavía. |
 
 **Formato de `FIREBASE_PRIVATE_KEY`:** el JSON del service account trae la clave con saltos de línea reales. Al copiarla a `.env` debe ir en una sola línea, entre comillas dobles, con los saltos de línea como `\n` literales:
@@ -324,3 +325,15 @@ Al finalizar imprime un resumen (`analysisId`, `status`, `anomaliesCount`, `high
 ├── tsconfig.json
 └── README.md
 ```
+
+---
+
+## 🚀 Producción
+
+- Build de imagen: `docker build -t ai-energy-api .` y `docker run -p 3000:3000 --env-file .env ai-energy-api`.
+- Sin Docker: `npm ci && npm run build && npm run start:prod`.
+- El arranque falla si faltan `FIREBASE_*` o `CORS_ORIGIN` (con `NODE_ENV=production`).
+- Health checks sin autenticación: `GET /health` (liveness) y `GET /health/ready` (verifica Firestore).
+- Rate limit global de 120 req/min por IP; `helmet` activo; apagado ordenado ante `SIGTERM`.
+- Despliega los índices con `firebase deploy --only firestore:indexes` (`firestore.indexes.json`) antes del primer uso.
+- `POST /ai/analyze` corre en el proceso (background): usa un servicio de larga vida (no serverless/scale-to-zero).

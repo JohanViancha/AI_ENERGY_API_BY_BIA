@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { AnalysesRepository } from '../../anomalies/analyses.repository';
 import { AnomaliesRepository } from '../../anomalies/anomalies.repository';
 import { Analysis } from '../../anomalies/entities/analysis.entity';
@@ -25,6 +25,8 @@ const PROGRESS_BY_PHASE = {
 
 @Injectable()
 export class AnomalyEngineService {
+  private readonly logger = new Logger(AnomalyEngineService.name);
+
   constructor(
     private readonly metersRepository: MetersRepository,
     private readonly readingEventLoader: ReadingEventLoaderService,
@@ -76,12 +78,19 @@ export class AnomalyEngineService {
       const errorCode = error instanceof Error ? error.name : 'UNKNOWN_ERROR';
       const errorMessage =
         error instanceof Error ? error.message : String(error);
-      await this.analysesRepository.finish(
-        analysisId,
-        'FAILED',
-        errorCode,
-        errorMessage,
-      );
+      try {
+        await this.analysesRepository.finish(
+          analysisId,
+          'FAILED',
+          errorCode,
+          errorMessage,
+        );
+      } catch (finishError) {
+        // Sin este catch, un fallo al persistir FAILED ser�a un unhandledRejection que tumba el proceso.
+        this.logger.error(
+          `Could not mark analysis ${analysisId} as FAILED: ${String(finishError)}`,
+        );
+      }
     });
 
     return analysisId;
